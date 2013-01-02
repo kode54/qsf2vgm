@@ -173,7 +173,6 @@ enum {
     cmd_delay           = 0x61,
     cmd_delay_735       = 0x62,
     cmd_delay_882       = 0x63,
-    cmd_byte_delay      = 0x64,
     cmd_end             = 0x66,
     cmd_data_block      = 0x67,
     cmd_ram_block       = 0x68,
@@ -493,7 +492,7 @@ int main(int argc, char const* const* argv)
         struct qsf_command * command = cmd_list.commands + rendered;
         uint32_t delta = command->timestamp - howmany;
         howmany = command->timestamp;
-        while (delta >= 256)
+        while (delta > 16)
         {
             command_buffer[ 0 ] = cmd_delay;
             command_buffer[ 1 ] = (uint8_t)( delta );
@@ -501,24 +500,10 @@ int main(int argc, char const* const* argv)
             fwrite( command_buffer, 1, 3, f );
             delta -= (uint16_t)delta;
         }
-        while (delta)
+        if (delta)
         {
-            if ( delta > 16 )
-            {
-                uint32_t delta_partial = delta;
-                if ( delta_partial > 255 )
-                    delta_partial = 255;
-                delta -= delta_partial;
-                command_buffer[ 0 ] = cmd_byte_delay;
-                command_buffer[ 1 ] = (uint8_t) delta_partial;
-                fwrite( command_buffer, 1, 2, f );
-            }
-            else
-            {
-                command_buffer[ 0 ] = cmd_short_delay + delta - 1;
-                fwrite( command_buffer, 1, 1, f );
-                break;
-            }
+            command_buffer[ 0 ] = cmd_short_delay + delta - 1;
+            fwrite( command_buffer, 1, 1, f );
         }
         command_buffer[ 0 ] = cmd_qsound_write;
         command_buffer[ 1 ] = (uint8_t)(command->data >> 8);
